@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "766552240054",
+    "project_id": "chatum-5bd99",
+    "storage_bucket": "chatum-5bd99.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:766552240054:android:1acae33e6a1453476a5b17",
+        "android_client_info": {
+          "package_name": "com.example.chatum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAOEuNhSis39aTD4pruOnL3RfuXhKxwt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
