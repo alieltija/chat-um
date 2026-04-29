@@ -6,7 +6,7 @@ class SnackBarServices {
   void showSnackBarError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
         content: Text(
           message,
           style: const TextStyle(color: Colors.white, fontSize: 15),
@@ -19,7 +19,7 @@ class SnackBarServices {
   void showSnackBarSuccess(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
         content: Text(
           message,
           style: const TextStyle(color: Colors.white, fontSize: 15),

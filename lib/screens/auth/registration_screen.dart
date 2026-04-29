@@ -1,8 +1,13 @@
 import 'dart:io';
 
+import 'package:chatum/providers/auth_provider.dart' as myauth;
+import 'package:chatum/services/db_services.dart';
 import 'package:chatum/services/media_services.dart';
+import 'package:chatum/services/snackbar_services.dart';
+import 'package:chatum/services/storage_services.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../services/navigation_services.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -18,12 +23,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   late double _deviceHeight;
   late double _deviceWidth;
 
-  String? name;
+  String? displayName;
   String? email;
   String? password;
   File? image;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  myauth.AuthProvider? authProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -33,31 +40,39 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Scaffold(
       body: Container(
         alignment: Alignment.center,
-        child: registrationScreenUI(),
+        child: ChangeNotifierProvider<myauth.AuthProvider>.value(
+          value: myauth.AuthProvider.instance,
+          child: registrationScreenUI(),
+        ),
       ),
     );
   }
 
   Widget registrationScreenUI() {
-    return SingleChildScrollView(
-      physics: BouncingScrollPhysics(),
-      child: Container(
-        height: _deviceHeight * 0.75,
-        width: _deviceWidth,
-        padding: EdgeInsets.symmetric(horizontal: _deviceWidth * 0.1),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Builder(
+      builder: (BuildContext context) {
+        authProvider = Provider.of<myauth.AuthProvider>(context);
+        return SingleChildScrollView(
+          physics: BouncingScrollPhysics(),
+          child: Container(
+            height: _deviceHeight * 0.75,
+            width: _deviceWidth,
+            padding: EdgeInsets.symmetric(horizontal: _deviceWidth * 0.1),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.start,
 
-          children: [
-            _headingWidget(),
-            _inputForm(),
-            _registerButton(),
-            _loginRedirect(),
-          ],
-        ),
-      ),
+              children: [
+                _headingWidget(),
+                _inputForm(),
+                _registerButton(),
+                _loginRedirect(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -165,7 +180,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return null;
       },
       onSaved: (value) {
-        name = value.toString().trim();
+        displayName = value;
       },
       decoration: InputDecoration(
         hintText: "Name",
@@ -192,7 +207,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return null;
       },
       onSaved: (value) {
-        email = value.toString().trim();
+        email = value;
       },
       decoration: InputDecoration(
         hintText: "Email",
@@ -210,7 +225,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       keyboardType: TextInputType.text,
       style: TextStyle(color: Colors.white),
       onSaved: (value) {
-        password = value.toString().trim();
+        password = value;
       },
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
@@ -222,7 +237,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return null;
       },
       onChanged: (value) {
-        password = value.toString().trim();
+        password = value;
       },
       decoration: InputDecoration(
         hintText: "Password",
@@ -237,22 +252,70 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return SizedBox(
       height: _deviceHeight * 0.06,
       width: _deviceWidth,
-      child: MaterialButton(
-        onPressed: () {
-          FocusScope.of(context).unfocus();
-          if (_formKey.currentState!.validate()) {
-            print("ok");
-          }
+      child: Consumer<myauth.AuthProvider>(
+        builder: (context, auth, child) {
+          return MaterialButton(
+            onPressed: authProvider?.status == myauth.AuthStatus.authenticating
+                ? null
+                : () async {
+                    FocusScope.of(context).unfocus();
+                    if (_formKey.currentState!.validate()) {
+                      _formKey.currentState!.save();
+                      if (image == null) {
+                        SnackBarServices.instance.showSnackBarError(
+                          context,
+                          "Profile picture is not set!",
+                        );
+                        return;
+                      }
+                      await authProvider?.registerWithEmailAndPassword(
+                        context,
+                        email!,
+                        password!,
+                        (String uid) async {
+                          try {
+                            // String? imageURL = await StorageServices.instance
+                            //     .uploadUserImage(uid, image!);
+
+                            await DbServices.instance.storeUserData(
+                              uid,
+                              displayName!,
+                              email!,
+                              "photoURL",
+                            );
+                            print(
+                              "User data stored successfully for UID: $uid",
+                            );
+                          } catch (e) {
+                            SnackBarServices.instance.showSnackBarError(
+                              context,
+                              "Failed to upload profile picture.",
+                            );
+                          }
+                        },
+                      );
+                    }
+                  },
+            color: Colors.blue,
+            child: authProvider?.status == myauth.AuthStatus.authenticating
+                ? SizedBox(
+                    height: _deviceHeight * 0.035,
+                    width: _deviceHeight * 0.035,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    "Register",
+                    style: TextStyle(
+                      fontSize: _deviceHeight * 0.020,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+          );
         },
-        color: Colors.blue,
-        child: Text(
-          "Register",
-          style: TextStyle(
-            fontSize: _deviceHeight * 0.020,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
       ),
     );
   }

@@ -47,6 +47,7 @@
 //     notifyListeners();
 //   }
 // }
+import 'package:chatum/services/navigation_services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/snackbar_services.dart';
@@ -98,5 +99,42 @@ class AuthProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  Future<void> registerWithEmailAndPassword(
+    BuildContext context,
+    String email,
+    String password,
+    Future<void> Function(String uid) onSuccess,
+  ) async {
+    status = AuthStatus.authenticating;
+    notifyListeners();
+
+    try {
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      user = result.user;
+      status = AuthStatus.authenticated;
+      await onSuccess(user!.uid);
+      NavigationServices.instance.navigateTo("login");
+      if (context.mounted) {
+        SnackBarServices.instance.showSnackBarSuccess(
+          context,
+          "Registration successful! Please log in via ${user?.email}",
+        );
+      }
+    } catch (e) {
+      status = AuthStatus.error;
+      user = null;
+      if (context.mounted) {
+        SnackBarServices.instance.showSnackBarError(
+          context,
+          "Registration failed: ${e.toString()}",
+        );
+      }
+      notifyListeners();
+    }
   }
 }

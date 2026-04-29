@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return SizedBox(
       height: _deviceHeight * 0.12,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -84,14 +84,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _inputForm() {
     return SizedBox(
-      height: _deviceHeight * 0.16,
+      height: _deviceHeight * 0.165,
+      width: _deviceWidth,
       child: Form(
         key: _formKey,
         onChanged: () {
           _formKey.currentState?.save();
         },
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [_emailInputForm(), _passwordInputForm()],
@@ -171,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (context, auth, child) {
           return MaterialButton(
             onPressed: auth.status == myauth.AuthStatus.authenticating
-                ? null // Disable button while loading
+                ? null
                 : () async {
                     FocusScope.of(context).unfocus();
                     if (_formKey.currentState!.validate()) {
@@ -185,9 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
             color: Colors.blue,
             child: auth.status == myauth.AuthStatus.authenticating
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
+                ? SizedBox(
+                    height: _deviceHeight * 0.035,
+                    width: _deviceHeight * 0.035,
                     child: CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
