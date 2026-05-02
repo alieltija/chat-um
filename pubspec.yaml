@@ -43,6 +43,7 @@ dependencies:
   image_picker: ^1.2.1
   timeago: ^3.7.1
   flutter_spinkit: ^5.2.2
+  cloudinary_public: ^0.23.1
 
 dev_dependencies:
   flutter_test:

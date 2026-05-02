@@ -1,25 +1,32 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
-class StorageServices {
-  static StorageServices instance = StorageServices();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+class CloudinaryServices {
+  static CloudinaryServices instance = CloudinaryServices();
 
-  String userImage = "user_images";
+  final String cloudName = "dfeaec5nh";
+  final String uploadPreset = "chatum";
+
+  late CloudinaryPublic _cloudinaryPublic;
+
+  CloudinaryServices() {
+    _cloudinaryPublic = CloudinaryPublic(cloudName, uploadPreset, cache: false);
+  }
 
   Future<String?> uploadUserImage(String uid, File image) async {
     try {
-      Reference ref = _storage.ref().child(userImage).child('$uid.jpg');
-      UploadTask uploadTask = ref.putFile(image);
+      CloudinaryResponse response = await _cloudinaryPublic.uploadFile(
+        CloudinaryFile.fromFile(
+          image.path,
+          folder: "users/$uid",
+          publicId: uid,
+          resourceType: CloudinaryResourceType.Image,
+        ),
+      );
 
-      TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
-
-      String downloadURL = await snapshot.ref.getDownloadURL();
-
-      return downloadURL;
+      return response.secureUrl;
     } catch (e) {
-      print("Error: $e");
-
+      print("Error uploading image: $e");
       return null;
     }
   }

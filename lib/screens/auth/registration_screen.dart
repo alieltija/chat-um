@@ -274,15 +274,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         password!,
                         (String uid) async {
                           try {
+                            String? imageURL = await CloudinaryServices.instance
+                                .uploadUserImage(uid, image!);
                             // String? imageURL = await StorageServices.instance
                             //     .uploadUserImage(uid, image!);
+                            print("Image uploaded successfully: $imageURL");
 
-                            await DbServices.instance.storeUserData(
-                              uid,
-                              displayName!,
-                              email!,
-                              "photoURL",
-                            );
+                            if (imageURL != null) {
+                              await DbServices.instance.storeUserData(
+                                uid,
+                                displayName!,
+                                email!,
+                                imageURL,
+                              );
+                            }
                             print(
                               "User data stored successfully for UID: $uid",
                             );

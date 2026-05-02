@@ -86,14 +86,26 @@ class AuthProvider extends ChangeNotifier {
       user = result.user;
       status = AuthStatus.authenticated;
 
-      if (context.mounted) {
+      if (user!.emailVerified && user != null && context.mounted) {
         SnackBarServices.instance.showSnackBarSuccess(
           context,
           'Welcome back, ${user?.email}!',
         );
+
+        NavigationServices.instance.navigateToReplacement("home");
+      } else if (user != null && context.mounted) {
+        SnackBarServices.instance.showSnackBarError(
+          context,
+          "Email not verified. Please check your inbox for a verification email.",
+        );
+        await _auth.signOut();
+        user = null;
+        status = AuthStatus.notAuthenticated;
+        notifyListeners();
       }
     } catch (e) {
       status = AuthStatus.error;
+      user = null;
       if (context.mounted) {
         SnackBarServices.instance.showSnackBarError(context, e.toString());
       }
@@ -116,14 +128,20 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
       user = result.user;
+
+      if (user != null) {
+        await user!.sendEmailVerification();
+      }
+
       status = AuthStatus.authenticated;
-      await onSuccess(user!.uid);
-      NavigationServices.instance.navigateTo("login");
-      if (context.mounted) {
+      await onSuccess(result.user!.uid);
+
+      if (user != null && context.mounted) {
         SnackBarServices.instance.showSnackBarSuccess(
           context,
-          "Registration successful! Please log in via ${user?.email}",
+          "Registration successful! Please check your email for verification: ${user?.email}",
         );
+        NavigationServices.instance.navigateToReplacement("login");
       }
     } catch (e) {
       status = AuthStatus.error;
@@ -135,6 +153,30 @@ class AuthProvider extends ChangeNotifier {
         );
       }
       notifyListeners();
+    }
+  }
+
+  Future<void> logOUT(BuildContext context) async {
+    notifyListeners();
+    try {
+      await _auth.signOut();
+      user = null;
+      status = AuthStatus.notAuthenticated;
+      if (user == null && context.mounted) {
+        await Future.delayed(const Duration(seconds: 1), () {});
+        SnackBarServices.instance.showSnackBarSuccess(
+          context,
+          "Logged out successfully from ${user?.email}",
+        );
+        NavigationServices.instance.navigateToReplacement("login");
+      }
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarServices.instance.showSnackBarError(
+          context,
+          "Logout failed: ${e.toString()}",
+        );
+      }
     }
   }
 }
