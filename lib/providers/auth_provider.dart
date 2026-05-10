@@ -1,53 +1,5 @@
-// import 'package:flutter/material.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-
-// enum AuthStatus {
-//   notAuthenticated,
-//   authenticating,
-//   authenticated,
-//   userNotFound,
-//   error,
-// }
-
-// class AuthProvider extends ChangeNotifier {
-//   User? user;
-//   AuthStatus status = AuthStatus.notAuthenticated;
-
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-//   static AuthProvider instance = AuthProvider();
-
-//   AuthProvider() {
-//     // Optional: Listen to auth changes automatically when the app starts
-//     _auth.authStateChanges().listen((User? newUser) {
-//       user = newUser;
-//       status = newUser != null
-//           ? AuthStatus.authenticated
-//           : AuthStatus.notAuthenticated;
-//       notifyListeners();
-//     });
-//   }
-
-//   Future<void> logInWithEmailAndPassword(String email, String password) async {
-//     status = AuthStatus.authenticating;
-//     notifyListeners();
-//     try {
-//       UserCredential result = await _auth.signInWithEmailAndPassword(
-//         email: email,
-//         password: password,
-//       );
-
-//       user = result.user;
-//       status = AuthStatus.authenticated;
-//       // Navigate to HomePage
-//     } catch (e) {
-//       status = AuthStatus.error;
-//       print("Login error: $e");
-//     }
-//     notifyListeners();
-//   }
-// }
 import 'package:chatum/services/navigation_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/snackbar_services.dart';
@@ -68,7 +20,26 @@ class AuthProvider extends ChangeNotifier {
           ? AuthStatus.authenticated
           : AuthStatus.notAuthenticated;
       notifyListeners();
+      checkCurrentUserIsAuthenticated();
     });
+  }
+
+  void _autoLogin() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (user != null &&
+          user!.emailVerified &&
+          NavigationServices.instance.navigatorKey.currentState != null) {
+        NavigationServices.instance.navigateToReplacement("home");
+      }
+    });
+  }
+
+  void checkCurrentUserIsAuthenticated() async {
+    user = await _auth.currentUser;
+    if (user != null) {
+      notifyListeners();
+      _autoLogin();
+    }
   }
 
   Future<void> logInWithEmailAndPassword(
@@ -157,18 +128,18 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logOUT(BuildContext context) async {
-    notifyListeners();
     try {
       await _auth.signOut();
       user = null;
       status = AuthStatus.notAuthenticated;
-      if (user == null && context.mounted) {
-        await Future.delayed(const Duration(seconds: 1), () {});
+      notifyListeners();
+
+      if (context.mounted) {
+        NavigationServices.instance.navigateToReplacement("login");
         SnackBarServices.instance.showSnackBarSuccess(
           context,
-          "Logged out successfully from ${user?.email}",
+          "Logged out successfully!",
         );
-        NavigationServices.instance.navigateToReplacement("login");
       }
     } catch (e) {
       if (context.mounted) {

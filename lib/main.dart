@@ -1,4 +1,5 @@
 import 'package:chatum/firebase_options.dart';
+import 'package:chatum/providers/auth_provider.dart';
 import 'package:chatum/screens/auth/login_screen.dart';
 import 'package:chatum/screens/auth/registration_screen.dart';
 import 'package:chatum/screens/home/home_screen.dart';
