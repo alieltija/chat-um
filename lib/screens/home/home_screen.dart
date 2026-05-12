@@ -1,4 +1,5 @@
-import 'package:chatum/screens/home/pages/profile_page.dart';
+import './pages/profile_page.dart';
+import './pages/recent_conversation_page.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,7 +25,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    // TODO: implement dispose
     _tabController.dispose();
     super.dispose();
   }
@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen>
       controller: _tabController,
       children: <Widget>[
         ProfilePage(height: _deviceHeight, width: _deviceWidth),
-        ProfilePage(height: _deviceHeight, width: _deviceWidth),
+        RecentConversationPage(height: _deviceHeight, width: _deviceWidth),
         ProfilePage(height: _deviceHeight, width: _deviceWidth),
       ],
     );

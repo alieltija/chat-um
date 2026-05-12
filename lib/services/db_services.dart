@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/contac_model.dart';
+import '../models/contact_model.dart';
+import '../models/conversation_model.dart';
 
 class DbServices {
   static DbServices instance = DbServices();
@@ -7,6 +8,7 @@ class DbServices {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   String userCollection = "Users";
+  String conversations = "Conversations";
 
   Future<void> storeUserData(
     String uid,
@@ -31,5 +33,19 @@ class DbServices {
     return ref.get().asStream().map((snapshot) {
       return Contact.fromFirestore(snapshot);
     });
+  }
+
+  Stream<List<Conversation>> getConversation(String uid) {
+    return _db
+        .collection(userCollection)
+        .doc(uid)
+        .collection(conversations)
+        .orderBy("timestamp", descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Conversation.fromFirestore(doc))
+              .toList();
+        });
   }
 }

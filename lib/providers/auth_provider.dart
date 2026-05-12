@@ -1,5 +1,4 @@
 import 'package:chatum/services/navigation_services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/snackbar_services.dart';
@@ -136,10 +135,6 @@ class AuthProvider extends ChangeNotifier {
 
       if (context.mounted) {
         NavigationServices.instance.navigateToReplacement("login");
-        SnackBarServices.instance.showSnackBarSuccess(
-          context,
-          "Logged out successfully!",
-        );
       }
     } catch (e) {
       if (context.mounted) {

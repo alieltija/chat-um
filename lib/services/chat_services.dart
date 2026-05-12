@@ -6,7 +6,11 @@ class ChatServices {
   static Future<void> sendMessage({
     required String conversationId,
     required String senderId,
+    required String senderImage,
+    required String senderName,
     required String recieverId,
+    required String receiverName,
+    required String receiverImage,
     required String messageText,
     required String messageType,
   }) async {
@@ -51,13 +55,15 @@ class ChatServices {
         .collection("Conversations")
         .doc(recieverId);
 
-    batch.update(senderInboxRef, {
+    batch.set(senderInboxRef, {
+      "displayName": receiverName, // Store who I'm talking to
+      "photoURL": receiverImage,
       "lastmessage": messageText,
       "timestamp": now,
       "type": messageType,
-    });
+    }, SetOptions(merge: true));
 
-    // Update reciever inbox view
+    // Update receiver inbox view (Store sender's info here)
 
     final DocumentReference reciverInboxRef = _db
         .collection("Users")
@@ -65,13 +71,14 @@ class ChatServices {
         .collection("Conversations")
         .doc(senderId);
 
-    batch.update(reciverInboxRef, {
+    batch.set(reciverInboxRef, {
+      "displayName": senderName, // Store who is talking to me
+      "photoURL": senderImage,
       "lastmessage": messageText,
       "timestamp": now,
       "type": messageType,
       "unseenCount": FieldValue.increment(1),
-    });
-
+    }, SetOptions(merge: true));
     try {
       await batch.commit();
     } catch (e) {

@@ -4,7 +4,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/db_services.dart';
-import '../../../models/contac_model.dart';
+import '../../../models/contact_model.dart';
 
 // ignore: must_be_immutable
 class ProfilePage extends StatelessWidget {
@@ -29,7 +29,7 @@ class ProfilePage extends StatelessWidget {
     return Builder(
       builder: (BuildContext context) {
         auth = Provider.of<AuthProvider>(context);
-        if (auth.user == null) {
+        if (auth.status == AuthStatus.notAuthenticated || auth.user == null) {
           return Center(
             child: SpinKitWanderingCubes(
               color: Colors.blue,
