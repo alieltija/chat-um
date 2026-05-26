@@ -39,41 +39,45 @@ class ProfilePage extends StatelessWidget {
         }
 
         return StreamBuilder<Contact>(
+          // FIX: Changed from getUserDataFuture to getUserData to give the StreamBuilder a proper Stream
           stream: DbServices.instance.getUserData(auth.user!.uid),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(child: Text("Error: ${snapshot.error}"));
             }
 
-            if (snapshot.connectionState == ConnectionState.active &&
-                !snapshot.hasData) {
+            // Checking active connection status safely for streams
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: SpinKitWanderingCubes(
+                  color: Colors.blue,
+                  size: height! * 0.03,
+                ),
+              );
+            }
+
+            if (!snapshot.hasData) {
               return const Center(
                 child: Text("User document not found in Firestore"),
               );
             }
 
-            if (snapshot.hasData) {
-              var userData = snapshot.data;
-              return Align(
-                child: SizedBox(
-                  height: height! * 0.50,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      _userImageWidget(userData!.photoURL),
-                      _userNameWidget(userData.displayName),
-                      _userEmailWidget(userData.email),
-                      _logOutButton(context),
-                    ],
-                  ),
+            var userData = snapshot.data;
+            return Align(
+              child: SizedBox(
+                height: height! * 0.50,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisSize: MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    _userImageWidget(userData!.photoURL),
+                    _userNameWidget(userData.displayName),
+                    _userEmailWidget(userData.email),
+                    _logOutButton(context),
+                  ],
                 ),
-              );
-            }
-            return SpinKitWanderingCubes(
-              color: Colors.blue,
-              size: height! * 0.03,
+              ),
             );
           },
         );

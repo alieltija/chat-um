@@ -1,23 +1,32 @@
-import 'package:chatum/models/conversation_model.dart';
-import 'package:chatum/services/db_services.dart';
+import '../../../models/conversation_model.dart';
+import '../../../services/db_services.dart';
+import '../../../services/chat_services.dart'; // Make sure this is imported
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:timer_builder/timer_builder.dart';
 import '../../../providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../services/navigation_services.dart';
+import '../../conversation/conversation_page.dart';
 
-class RecentConversationPage extends StatelessWidget {
+class RecentConversationPage extends StatefulWidget {
   const RecentConversationPage({super.key, this.height, this.width});
 
   final double? height;
   final double? width;
 
   @override
+  State<RecentConversationPage> createState() => _RecentConversationPageState();
+}
+
+class _RecentConversationPageState extends State<RecentConversationPage> {
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: width,
+    return SizedBox(
+      height: widget.height,
+      width: widget.width,
       child: ChangeNotifierProvider<AuthProvider>.value(
         value: AuthProvider.instance,
         child: _conversationPageUI(),
@@ -29,21 +38,26 @@ class RecentConversationPage extends StatelessWidget {
     return Builder(
       builder: (BuildContext context) {
         var auth = Provider.of<AuthProvider>(context);
-        return Container(
-          height: height,
-          width: width,
-          child: StreamBuilder<List<Conversation>>(
-            stream: DbServices.instance.getConversation(auth.user!.uid),
+        return SizedBox(
+          height: widget.height,
+          width: widget.width,
+          child: StreamBuilder<List<ConversationSnippet>>(
+            stream: DbServices.instance.getUserConversation(auth.user!.uid),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text("Error: ${snapshot.error}"));
+                return Center(
+                  child: Text(
+                    "Error: ${snapshot.error}",
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(
                   child: SpinKitWanderingCubes(
                     color: Colors.blue,
-                    size: height! * 0.03,
+                    size: widget.height! * 0.03,
                   ),
                 );
               }
@@ -57,27 +71,66 @@ class RecentConversationPage extends StatelessWidget {
                 );
               }
 
-              var data = snapshot.data;
+              var data = snapshot.data!;
               return ListView.builder(
-                itemCount: data!.length,
+                itemCount: data.length,
                 itemBuilder: (context, index) {
-                  var conversation = data[index];
+                  var snippet = data[index];
                   return ListTile(
-                    onTap: () {},
+                    onTap: () async {
+                      // Automatically reset unseen count on tap
+                      await ChatServices.resetUnseenCount(
+                        auth.user!.uid,
+                        snippet.uid,
+                      );
+                      print(
+                        "Snippet data: ${snippet.uid} ${snippet.photoURL} ${snippet.displayName}, ${snippet.lastmessage}, ${snippet.timestamp.toDate()}",
+                      );
+
+                      // Hardcoded placeholder conversation lookup fallback
+                      // Replace logic below with a shared deterministic ID if your matching matrix requires it
+                      String determinedRoomId =
+                          snippet.uid.hashCode <= auth.user!.uid.hashCode
+                          ? "${snippet.uid}_${auth.user!.uid}"
+                          : "${auth.user!.uid}_${snippet.uid}";
+
+                      NavigationServices.instance.navigateToRoute(
+                        MaterialPageRoute(
+                          builder: (BuildContext context) {
+                            return ConversationPage(
+                              conversationId: determinedRoomId,
+                              receiverId: snippet.uid,
+                              receiverName: snippet.displayName,
+                              receiverImage: snippet.photoURL,
+                            );
+                          },
+                        ),
+                      );
+                    },
                     leading: CircleAvatar(
-                      radius: width! * 0.06,
-                      backgroundImage: NetworkImage(conversation.photoURL),
+                      radius: widget.width! * 0.06,
+                      backgroundImage: snippet.photoURL.trim().isNotEmpty
+                          ? NetworkImage(snippet.photoURL)
+                          : null,
                       backgroundColor: Colors.grey[800],
+                      child: snippet.photoURL.trim().isEmpty
+                          ? const Icon(Icons.person, color: Colors.white)
+                          : null,
                     ),
-                    title: Text(conversation.displayName),
+                    title: Text(
+                      snippet.displayName,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+
                     subtitle: Text(
-                      conversation.lastmessage,
+                      snippet.lastmessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70),
                     ),
                     trailing: _trailingWidget(
-                      conversation.timestamp,
-                      conversation.unseenCount,
+                      snippet.timestamp,
+                      snippet.unseenCount,
                     ),
                   );
                 },
@@ -89,26 +142,43 @@ class RecentConversationPage extends StatelessWidget {
     );
   }
 
-  Widget _trailingWidget(Timestamp _lastmessageTimestamp, int unseenCount) {
-    var _timeDiffrence = _lastmessageTimestamp.toDate().difference(
-      DateTime.now(),
-    );
+  Widget _trailingWidget(Timestamp lastmessageTimestamp, int unseenCount) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
-        Text(
-          timeago.format(_lastmessageTimestamp.toDate()),
-          style: TextStyle(fontSize: height! * 0.016, color: Colors.white38),
+        TimerBuilder.periodic(
+          const Duration(minutes: 1),
+          builder: (context) {
+            return Text(
+              timeago.format(lastmessageTimestamp.toDate()),
+              style: TextStyle(
+                fontSize: widget.height! * 0.016,
+                color: Colors.white38,
+              ),
+            );
+          },
         ),
         Container(
-          height: height! * 0.011,
-          width: width! * 0.024,
+          height: widget.height! * 0.015,
+          width: widget.width! * 0.03,
           decoration: BoxDecoration(
             color: unseenCount > 0 ? Colors.blue : Colors.transparent,
             borderRadius: BorderRadius.circular(500),
           ),
+          child: unseenCount > 0
+              ? Center(
+                  child: Text(
+                    "$unseenCount",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : null,
         ),
       ],
     );

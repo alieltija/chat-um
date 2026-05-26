@@ -5,7 +5,7 @@ class NavigationServices {
 
   static NavigationServices instance = NavigationServices();
 
-  Future<dynamic> navigateTo(String routeName) {
+  Future<dynamic> navigateTo(String routeName, {required arguments}) {
     return navigatorKey.currentState!.pushNamed(routeName);
   }
 
@@ -13,7 +13,7 @@ class NavigationServices {
     return navigatorKey.currentState!.pushReplacementNamed(routeName);
   }
 
-  Future<dynamic> navigatorToRoute(MaterialPageRoute route) {
+  Future<dynamic> navigateToRoute(MaterialPageRoute route) {
     return navigatorKey.currentState!.push(route);
   }
 

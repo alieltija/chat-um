@@ -1,3 +1,4 @@
+import 'package:chatum/services/db_services.dart';
 import 'package:chatum/services/navigation_services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,22 +6,61 @@ import '../services/snackbar_services.dart';
 
 enum AuthStatus { notAuthenticated, authenticating, authenticated, error }
 
+// A quick local data holder class structure for the user's details.
+// If you already have a user model class file, import that instead!
+class AppUserModel {
+  final String name;
+  final String image;
+  AppUserModel({required this.name, required this.image});
+}
+
 class AuthProvider extends ChangeNotifier {
   User? user;
   AuthStatus status = AuthStatus.notAuthenticated;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Added property to hold the active custom Firestore details
+  AppUserModel? currentUserModel;
+
   static AuthProvider instance = AuthProvider();
 
   AuthProvider() {
-    _auth.authStateChanges().listen((User? newUser) {
+    _auth.authStateChanges().listen((User? newUser) async {
       user = newUser;
-      status = newUser != null
-          ? AuthStatus.authenticated
-          : AuthStatus.notAuthenticated;
+      if (newUser != null) {
+        status = AuthStatus.authenticated;
+        // Fetch profile details whenever Firebase auth state triggers true
+        await fetchCurrentUserModel();
+      } else {
+        status = AuthStatus.notAuthenticated;
+        currentUserModel = null;
+      }
       notifyListeners();
       checkCurrentUserIsAuthenticated();
     });
+  }
+
+  // Helper method to fetch and structure your profile data from your DbService
+  Future<void> fetchCurrentUserModel() async {
+    if (user != null) {
+      try {
+        // FIX: Call the new Future method instead of the Stream
+        var userDoc = await DbServices.instance.getUserDataFuture(user!.uid);
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data() as Map<String, dynamic>;
+
+          currentUserModel = AppUserModel(
+            // FIX: explicitly using 'displayName' and 'photoURL' to match storeUserData
+            name: data['displayName'] ?? 'User',
+            image: data['photoURL'] ?? '',
+          );
+          notifyListeners();
+        }
+      } catch (e) {
+        print("Error compiling currentUserModel profiles: $e");
+      }
+    }
   }
 
   void _autoLogin() {
@@ -28,13 +68,14 @@ class AuthProvider extends ChangeNotifier {
       if (user != null &&
           user!.emailVerified &&
           NavigationServices.instance.navigatorKey.currentState != null) {
+        DbServices.instance.updateLastSeen(user!.uid);
         NavigationServices.instance.navigateToReplacement("home");
       }
     });
   }
 
-  void checkCurrentUserIsAuthenticated() async {
-    user = await _auth.currentUser;
+  void checkCurrentUserIsAuthenticated() {
+    user = _auth.currentUser;
     if (user != null) {
       notifyListeners();
       _autoLogin();
@@ -57,6 +98,9 @@ class AuthProvider extends ChangeNotifier {
       status = AuthStatus.authenticated;
 
       if (user!.emailVerified && user != null && context.mounted) {
+        // Fetch data immediately upon manual sign-in success
+        await fetchCurrentUserModel();
+
         SnackBarServices.instance.showSnackBarSuccess(
           context,
           'Welcome back, ${user?.email}!',
@@ -70,12 +114,14 @@ class AuthProvider extends ChangeNotifier {
         );
         await _auth.signOut();
         user = null;
+        currentUserModel = null;
         status = AuthStatus.notAuthenticated;
         notifyListeners();
       }
     } catch (e) {
       status = AuthStatus.error;
       user = null;
+      currentUserModel = null;
       if (context.mounted) {
         SnackBarServices.instance.showSnackBarError(context, e.toString());
       }
@@ -109,13 +155,14 @@ class AuthProvider extends ChangeNotifier {
       if (user != null && context.mounted) {
         SnackBarServices.instance.showSnackBarSuccess(
           context,
-          "Registration successful! Please check your email for verification: ${user?.email}",
+          "Registration successful! Please check your email for verification",
         );
         NavigationServices.instance.navigateToReplacement("login");
       }
     } catch (e) {
       status = AuthStatus.error;
       user = null;
+      currentUserModel = null;
       if (context.mounted) {
         SnackBarServices.instance.showSnackBarError(
           context,
@@ -128,8 +175,11 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logOUT(BuildContext context) async {
     try {
+      String currentUserId = _auth.currentUser!.uid;
+      await DbServices.instance.updateLastSeen(currentUserId);
       await _auth.signOut();
       user = null;
+      currentUserModel = null; // Clean out memory scope data on exit
       status = AuthStatus.notAuthenticated;
       notifyListeners();
 

@@ -17,8 +17,7 @@ class ChatServices {
     final WriteBatch batch = _db.batch();
     final Timestamp now = Timestamp.now();
 
-    // Add message to main message collection
-
+    // 1. Add message to the nested sub-collection
     final DocumentReference messageReference = _db
         .collection("Conversations")
         .doc(conversationId)
@@ -32,23 +31,25 @@ class ChatServices {
       "timestamp": now,
     });
 
-    // Update the main message collection
-
+    // 2. Update the main chat room metadata
     final DocumentReference conversationReference = _db
         .collection("Conversations")
         .doc(conversationId);
 
-    batch.update(conversationReference, {
+    // FIX: Changed from batch.update to batch.set with merge: true
+    // This safely initializes the room if it's the first message!
+    batch.set(conversationReference, {
       "lastmessage": {
         "text": messageText,
         "senderId": senderId,
         "timestamp": now,
       },
       "updatedAt": now,
-    });
+      "members": [senderId, recieverId], // Safe initialization fallback
+      "ownerID": senderId,
+    }, SetOptions(merge: true));
 
-    // Update sender inbox view
-
+    // 3. Update sender inbox dashboard view
     final DocumentReference senderInboxRef = _db
         .collection("Users")
         .doc(senderId)
@@ -56,15 +57,14 @@ class ChatServices {
         .doc(recieverId);
 
     batch.set(senderInboxRef, {
-      "displayName": receiverName, // Store who I'm talking to
+      "displayName": receiverName,
       "photoURL": receiverImage,
       "lastmessage": messageText,
       "timestamp": now,
       "type": messageType,
     }, SetOptions(merge: true));
 
-    // Update receiver inbox view (Store sender's info here)
-
+    // 4. Update receiver inbox dashboard view
     final DocumentReference reciverInboxRef = _db
         .collection("Users")
         .doc(recieverId)
@@ -72,13 +72,14 @@ class ChatServices {
         .doc(senderId);
 
     batch.set(reciverInboxRef, {
-      "displayName": senderName, // Store who is talking to me
+      "displayName": senderName,
       "photoURL": senderImage,
       "lastmessage": messageText,
       "timestamp": now,
       "type": messageType,
       "unseenCount": FieldValue.increment(1),
     }, SetOptions(merge: true));
+
     try {
       await batch.commit();
     } catch (e) {
@@ -87,8 +88,7 @@ class ChatServices {
     }
   }
 
-  // Reset the unseen count when the user open chat
-
+  // Reset the unseen count when the user opens the chat
   static Future<void> resetUnseenCount(String myId, String otherId) async {
     try {
       await _db
@@ -98,7 +98,7 @@ class ChatServices {
           .doc(otherId)
           .update({'unseenCount': 0});
     } catch (e) {
-      print("Could not rest count: $e");
+      print("Could not reset count: $e");
     }
   }
 }
