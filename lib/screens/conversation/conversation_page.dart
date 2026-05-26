@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:chatum/models/conversation_model.dart';
 import 'package:chatum/models/message_model.dart';
 import 'package:chatum/providers/auth_provider.dart';
 import 'package:chatum/services/chat_services.dart';
@@ -39,7 +37,7 @@ class _ConversationPageState extends State<ConversationPage> {
   final TextEditingController _textController = TextEditingController();
   late AuthProvider _auth;
 
-  String _messageText = "";
+  String messageText = "";
 
   @override
   void dispose() {
@@ -331,7 +329,7 @@ class _ConversationPageState extends State<ConversationPage> {
           return null;
         },
         onChanged: (input) {
-          _messageText = input;
+          messageText = input;
         },
         cursorColor: Colors.white,
         decoration: const InputDecoration(
@@ -371,7 +369,7 @@ class _ConversationPageState extends State<ConversationPage> {
 
               // Clear the UI fields completely on success
               _textController.clear();
-              _messageText = "";
+              messageText = "";
               _formKey.currentState!.reset();
             } catch (e) {
               if (context.mounted) {
